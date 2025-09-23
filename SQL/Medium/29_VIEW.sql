@@ -57,6 +57,7 @@ FROM (
 ) AS subi;
 */
 
+/*
 CREATE VIEW V_Monthly_Summary AS
 (
 	SELECT 
@@ -66,5 +67,13 @@ CREATE VIEW V_Monthly_Summary AS
 	FROM Sales.Orders
 	GROUP BY MONTH(OrderDate), DATENAME(MONTH, OrderDate)
 )
+*/
 
 select * from V_Monthly_Summary
+
+-- REDUCE THE STEPS..
+
+-- LIKE MODULAR
+
+-- when we crete deafult schem is dbo.V_Monthly_Summary
+
