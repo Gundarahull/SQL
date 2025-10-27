@@ -20,13 +20,17 @@ CREATE TABLE persons(
 ALTER TABLE persons 
 ADD email varchar(50)
 
--- MODIFY
+-- MODIFY >> Releates to MySql
 ALTER TABLE persons
 MODIFY phone_number VARCHAR(100) NULL
+
+ALTER TABLE persons
+ALTER COLUMN phone_number VARCHAR(100) NULL
 
 ALTER TABLE persons
 DROP column email
 
 -- DROP
+
 
 DROP TABLE persons
