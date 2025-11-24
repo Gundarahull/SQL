@@ -1,0 +1,422 @@
+// Sequelize
+
+// CREATE
+await User.create({ name: req.body.name, branch: req.body.branch });
+
+// READ
+await User.findByPk(id);
+await User.findOne({ where: { name: "rahul" } });
+await User.findAll();  // returns []
+
+// UPDATE
+const user = await User.findByPk(id);
+if (user) await user.update({ name: "Looser" });
+// or
+await User.update({ name: "Looser" }, { where: { id } });
+
+// DELETE
+await User.destroy({ where: { id } });
+
+//RAW QUERY---------------
+const [sortedUsers] = await sequelize.query(`
+  SELECT u.id, u.name, COUNT(p.id) AS totalPosts
+  FROM "Users" u
+  LEFT JOIN "Posts" p
+    ON u.id = p.userId
+  GROUP BY u.id, u.name
+  ORDER BY totalPosts DESC
+`);
+console.log(sortedUsers);
+
+const userId = 1;
+
+const [results] = await sequelize.query(
+  `SELECT * FROM "Users" WHERE id = :id`,
+  {
+    replacements: { id: userId },
+    type: sequelize.QueryTypes.SELECT
+  }
+);
+
+console.log(results);
+
+// NAMED PARAMTERS
+// Named parameters
+await sequelize.query(
+  `SELECT * FROM "Users" WHERE id = :id AND status = :status`,
+  { replacements: { id: 1, status: "active" }, type: sequelize.QueryTypes.SELECT }
+);
+
+// Positional
+await sequelize.query(
+  `SELECT * FROM "Users" WHERE id = ? AND status = ?`,
+  { replacements: [1, "active"], type: sequelize.QueryTypes.SELECT } //type: sequelize.QueryTypes.RAW without specifying the things like SELECT , UPDATE, directly sequlize can handle what it is...
+);
+
+
+
+// Group By and Order BY
+
+const { Sequelize } = require("sequelize");
+const sequelize = require("./db");
+const User = require("./models/User");
+
+const result = await User.findAll({
+  attributes: [
+    // COUNT
+    [sequelize.fn("COUNT", sequelize.col("id")), "totalUsers"],
+
+    // SUM
+    [sequelize.fn("SUM", sequelize.col("age")), "sumAge"],
+
+    // AVG
+    [sequelize.fn("AVG", sequelize.col("age")), "avgAge"],
+
+    // MIN
+    [sequelize.fn("MIN", sequelize.col("age")), "minAge"],
+
+    // MAX
+    [sequelize.fn("MAX", sequelize.col("age")), "maxAge"],
+
+    // COUNT DISTINCT
+    [sequelize.fn("COUNT", sequelize.fn("DISTINCT", sequelize.col("branch"))), "uniqueBranches"]
+  ]
+});
+
+ORDER BY 
+
+const data = await User.findAll({
+  attributes: [
+    "branch",
+    [sequelize.fn("COUNT", sequelize.col("id")), "total"]
+  ],
+  group: ["branch"],
+  order: [["createdAt", "DESC"]] //its main
+  order: [[sequelize.fn("COUNT", sequelize.col("id")), "DESC"]]
+});
+
+//ALl miX
+
+const { fn, col, Op } = require("sequelize");
+
+const result = await User.findAll({
+  attributes: [
+    "branch",
+    [fn("COUNT", col("id")), "totalUsers"],
+    [fn("AVG", col("age")), "avgAge"],
+    [fn("MAX", col("age")), "oldest"],
+    [fn("MIN", col("age")), "youngest"]
+  ],
+  where: {
+    age: { [Op.gt]: 18 },   // age > 18
+    branch: { [Op.in]: ["CSE", "ECE"] } // branch in (CSE, ECE)
+    // you can add multiple conditions using [Op.and], [Op.or] also
+  },
+  group: ["branch"],
+  order: [[fn("AVG", col("age")), "DESC"]]
+});
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+1. Comparison Operators
+ | SQL                         | Sequelize Example                        |
+| --------------------------- | ---------------------------------------- |
+| `age = 25`                  | `{ age: 25 }`                            |
+| `age != 25`                 | `{ age: { [Op.ne]: 25 } }`               |
+| `age > 25`                  | `{ age: { [Op.gt]: 25 } }`               |
+| `age >= 25`                 | `{ age: { [Op.gte]: 25 } }`              |
+| `age < 25`                  | `{ age: { [Op.lt]: 25 } }`               |
+| `age <= 25`                 | `{ age: { [Op.lte]: 25 } }`              |
+| `age BETWEEN 20 AND 30`     | `{ age: { [Op.between]: [20, 30] } }`    |
+| `age NOT BETWEEN 20 AND 30` | `{ age: { [Op.notBetween]: [20, 30] } }` |
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+2. Logical Operators
+
+| SQL                           | Sequelize Example                                             |
+| ----------------------------- | ------------------------------------------------------------- |
+| `age > 18 AND branch = 'CSE'` | `{ [Op.and]: [{ age: { [Op.gt]: 18 } }, { branch: "CSE" }] }` |
+| `age > 18 OR branch = 'ECE'`  | `{ [Op.or]: [{ age: { [Op.gt]: 18 } }, { branch: "ECE" }] }`  |
+| `NOT (branch = 'CSE')`        | `{ branch: { [Op.not]: "CSE" } }`                             |
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+3. Set Operators
+
+| SQL                           | Sequelize Example                            |
+| ----------------------------- | -------------------------------------------- |
+| `branch IN ('CSE','ECE')`     | `{ branch: { [Op.in]: ["CSE", "ECE"] } }`    |
+| `branch NOT IN ('CSE','ECE')` | `{ branch: { [Op.notIn]: ["CSE", "ECE"] } }` |
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+5. Null Checks
+
+| SQL                  | Sequelize Example                |
+| -------------------- | -------------------------------- |
+| `branch IS NULL`     | `{ branch: { [Op.is]: null } }`  |
+| `branch IS NOT NULL` | `{ branch: { [Op.not]: null } }` |
+
+-----------------------------------------------------------------------------------------------------------------------
+
+// RELEATIONSHIPS
+
+✨ One-to-One (1:1) Relationship
+	👉 Real-world example:
+
+		A person has one passport.
+		One passport belongs to exactly one person.
+
+// If we need to do manufually, this type we need to define explicity 
+
+const Passport = sequelize.define("Passport", {
+  number: Sequelize.STRING,
+  personId: {
+    type: Sequelize.INTEGER,
+    references: {
+      model: "People",   // table name or model
+      key: "id"
+    },
+    allowNull: false,
+    onDelete: "CASCADE"
+  }
+});
+
+-- Defining the relationship
+
+const { Sequelize, DataTypes } = require("sequelize");
+const sequelize = new Sequelize("sqlite::memory:"); // for example
+
+// Person Model
+const Person = sequelize.define("Person", {
+  name: DataTypes.STRING
+});
+// Sequelize will automatically create id as INTEGER + autoIncrement.
+//correct way if you want to define a primary key explicitly, for example using UUIDs instead of the default integer.
+const Person = sequelize.define("Person", {
+  id: {
+    type: DataTypes.UUID,           // UUID type
+    defaultValue: DataTypes.UUIDV4, // auto-generate v4 UUID
+    primaryKey: true                // marks it as primary key
+  },
+  name: DataTypes.STRING
+});
+
+
+// Passport Model
+const Passport = sequelize.define("Passport", {
+  number: DataTypes.STRING
+});
+
+// Relationship
+Person.hasOne(Passport, { foreignKey: "personId" });  // Person → Passport >> hasOne / hasMany → determines where the foreign key lives, Creates a personId column in the Passport table (the target), “Each Person can have one Passport.
+Passport.belongsTo(Person, { foreignKey: "personId" }); // Passport → Person // Each Passport belongs to a Person
+
+// MEMORY TRICK :
+
+hasOne → “where the foreign key lives” (target table)
+
+belongsTo → “points back to the primary key” (source table)
+
+1️⃣ Person.hasOne(Passport, { foreignKey: "someID" })
+
+hasOne → defines the source → target direction.
+
+Source table: Person
+
+Target table: Passport
+
+Foreign key: someID
+
+This column lives in the target table (Passport).
+
+It references the primary key in the source table (Person.someID).
+
+So yes — Passport is the target table where the foreign key lives.
+
+
+// in custom join conditions 
+const peopleWithPassports = await Person.findAll({
+  include: [
+    {
+      model: Passport,
+      on: {
+        [Sequelize.Op.and]: [
+          Sequelize.where(Sequelize.col("Person.id"), "=", Sequelize.col("Passport.personId")),
+          Sequelize.where(Sequelize.col("Person.someID"), "=", Sequelize.col("Passport.passportSomeID"))
+        ]
+      },
+      required: true // INNER JOIN
+    }
+  ]
+});
+
+// Normaly case
+const users = await User.findAll({
+  include: [
+    {
+      model: Post,
+      on: {
+        userId: Sequelize.where(
+          Sequelize.col("User.id"),
+          "=",
+          Sequelize.col("Post.userId")
+        )
+      },
+      required: true   // INNER JOIN
+    }
+  ]
+});
+
+// LEFT JOIN 
+
+const peopleWithPassports = await Person.findAll({
+  include: {
+    model: Passport,
+    required: false // LEFT OUTER JOIN
+  }
+});
+
+// RIGHT JOIN 
+
+const result = await Person.findAll({
+  include: {
+    model: Passport,
+    required: false,
+    right: true // not all DBs support this
+  }
+});
+
+
+✨ One-to-Many (1:N) relationship
+
+const { Sequelize, DataTypes } = require("sequelize");
+const sequelize = new Sequelize("sqlite::memory:"); // Example DB
+
+// Teacher Model
+const Teacher = sequelize.define("Teacher", {
+  name: DataTypes.STRING
+});
+
+// Student Model
+const Student = sequelize.define("Student", {
+  name: DataTypes.STRING
+});
+
+
+// A Teacher can have many Students
+Teacher.hasMany(Student, { foreignKey: "teacherId" });
+
+// A Student belongs to one Teacher
+Student.belongsTo(Teacher, { foreignKey: "teacherId" });
+
+✅ Key Points
+
+Teacher.hasMany(Student) → target table is Student, foreign key teacherId will live there.
+
+Student.belongsTo(Teacher) → sets up the reverse association and helper methods (student.getTeacher()).
+
+Sequelize automatically creates teacherId in the Student table unless you define it explicitly.
+
+// Querying with Include (INNER JOIN)
+
+const teachersWithStudents = await Teacher.findAll({
+  include: Student
+});
+
+console.log(JSON.stringify(teachersWithStudents, null, 2));
+
+✨Many-to-Many (M:N) relationship
+	Students ↔ Courses
+
+	A student can enroll in many courses, and a course can have many students.
+
+	const { Sequelize, DataTypes } = require("sequelize");
+const sequelize = new Sequelize("sqlite::memory:");
+
+// Student Model
+const Student = sequelize.define("Student", {
+  name: DataTypes.STRING
+});
+
+// Course Model
+const Course = sequelize.define("Course", {
+  title: DataTypes.STRING
+});
+
+// Through table is automatically created as "StudentCourses" unless you specify
+Student.belongsToMany(Course, { through: "Enrollments" });
+Course.belongsToMany(Student, { through: "Enrollments" });
+
+
+
+HELPER METHODS
+
+| Method                   | Description                                          | Example                                                               |
+| ------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| `getCourses()`           | Fetch all courses for a student                      | `const courses = await student.getCourses();`                         |
+| `setCourses(courses)`    | Replace all current courses with new ones            | `await student.setCourses([math, english]);`                          |
+| `addCourse(course)`      | Add a single course                                  | `await student.addCourse(math);`                                      |
+| `addCourses(courses)`    | Add multiple courses                                 | `await student.addCourses([math, english]);`                          |
+| `removeCourse(course)`   | Remove a single course                               | `await student.removeCourse(math);`                                   |
+| `removeCourses(courses)` | Remove multiple courses                              | `await student.removeCourses([math, english]);`                       |
+| `hasCourse(course)`      | Check if a student is associated with a course       | `const enrolled = await student.hasCourse(math);`                     |
+| `hasCourses(courses)`    | Check if student is associated with multiple courses | `const enrolledAll = await student.hasCourses([math, english]);`      |
+| `countCourses()`         | Count how many courses a student has                 | `const total = await student.countCourses();`                         |
+| `createCourse(values)`   | Create a new course and associate it automatically   | `const newCourse = await student.createCourse({ title: "History" });` |
+
+
+
+
+
+const bob = await Student.create({ name: "Bob" });
+const alice = await Student.create({ name: "Alice" });
+
+const math = await Course.create({ title: "Math" });
+const english = await Course.create({ title: "English" });
+
+// Associate students with courses
+await bob.addCourse(math);       // Bob → Math
+await bob.addCourse(english);    // Bob → English
+await alice.addCourse(math);     // Alice → Math
+
+const students = await Student.findAll({ include: Course });
+console.log(JSON.stringify(students, null, 2));
+
+// Express API: Add Course to Student
+app.post("/student/add-course", async (req, res) => {
+  try {
+    const { studentId, course } = req.body;
+
+    // 1️⃣ Find the student
+    const student = await Student.findByPk(studentId);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // 2️⃣ Create the course (or find existing one if needed)
+    const [newCourse, created] = await Course.findOrCreate({
+      where: { title: course.title },
+      defaults: course
+    });
+
+    // 3️⃣ Associate course with student
+    await student.addCourse(newCourse);
+
+    // 4️⃣ Fetch updated student with courses
+    const updatedStudent = await Student.findByPk(studentId, { include: Course });
+
+    res.json({ message: "Course added successfully", student: updatedStudent });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
+AdminUser.belongsToMany(Merchant,{through:AdminUserMerchnat})
+Merchant.belongsToMany(AdminUser,{through:AdminUserMerchnat})
