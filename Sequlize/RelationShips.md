@@ -2,6 +2,19 @@
 
 ## RELEATIONSHIPS
 
+### TAKE EXAMPLE
+```
+  // One Brand has many Models
+VehicleBrand.hasMany(VehicleModel, { foreignKey: "vehicle_brand_id" });
+
+// One Model belongs to a Brand
+VehicleModel.belongsTo(VehicleBrand, { foreignKey: "vehicle_brand_id" });
+
+vehicle_brand_id is present in the VehicleModel, then we need to allign with main model
+```
+
+
+
 > ### ✨ One-to-One (1:1) Relationship
 
 -     	A person has one passport.
@@ -233,3 +246,4 @@ const peopleWithPassports = await Person.findAll({
 
 
 ```
+
