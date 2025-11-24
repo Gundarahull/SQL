@@ -11,7 +11,7 @@ VehicleBrand.hasMany(VehicleModel, { foreignKey: "vehicle_brand_id" });
 // One Model belongs to a Brand
 VehicleModel.belongsTo(VehicleBrand, { foreignKey: "vehicle_brand_id" });
 
-vehicle_brand_id is present in the VehicleModel, then we need to allign with main model
+vehicle_brand_id is need to be present in the VehicleModel, then we need to allign with main model(VehicleBrand)
 ************************************************************************************************
 ```
 
@@ -248,5 +248,6 @@ const peopleWithPassports = await Person.findAll({
 
 
 ```
+
 
 
